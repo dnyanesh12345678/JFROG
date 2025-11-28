@@ -1,0 +1,111 @@
+Skip to content
+Chat history
+
+
+You said:
+if my jfrog repo url is http://XXXX:8081
+and if i need to use https for maven compatiality for setting.xml
+for that in jfrog ui i set in genral setting custom base url like 
+https://XXXX:8081 then it will work?
+ChatGPT said:
+Short answer: No — just changing “Custom Base URL” to https://XXXX:8081 will NOT magically enable HTTPS.
+You must actually configure HTTPS (SSL/TLS) on your JFrog Artifactory or on the reverse proxy (Nginx/Apache/Traefik/HAProxy).
+
+Let me explain clearly.
+
+✅ Why “Custom Base URL = https://XXXX:8081” does NOT enable HTTPS
+Custom Base URL only affects:
+
+the URLs JFrog shows in UI
+
+links sent in emails
+
+repository links displayed during integration
+
+It does NOT create an HTTPS listener.
+
+If your server is listening only on:
+
+http://XXXX:8081
+then even if you set:
+
+Custom Base URL = https://XXXX:8081
+JFrog will still serve only HTTP, so Maven will fail with SSL errors.
+
+✅ The correct method to enable HTTPS
+You have two valid ways:
+
+Option 1: Enable HTTPS using a Reverse Proxy (recommended for Maven)
+Use Nginx/Apache:
+
+1. Install Nginx (example)
+sudo apt install nginx
+2. Configure Nginx SSL
+Create a config:
+
+server {
+    listen 443 ssl;
+    server_name your-domain.com;
+
+    ssl_certificate /etc/ssl/certs/artifact.crt;
+    ssl_certificate_key /etc/ssl/private/artifact.key;
+
+    location / {
+        proxy_pass http://localhost:8081/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+3. Restart Nginx
+sudo systemctl restart nginx
+Now your JFrog will be available at:
+
+https://your-domain.com
+4. Now update Custom Base URL to:
+https://your-domain.com
+✔ This is correct and works with Maven.
+
+Option 2: Enable HTTPS directly in Artifactory (not preferred)
+Artifactory can be configured to listen on HTTPS via tomcat/server.xml (if older version) or router TLS (if newer JFrog version).
+But this is more complex and not recommended.
+
+Most production setups use reverse proxy.
+
+🔧 What Maven needs
+In settings.xml, Maven expects:
+
+<url>https://your-domain.com/artifactory/... </url>
+This will only work if your server really supports HTTPS, not only configured in UI.
+
+🔥 Final Answer
+Custom Base URL = https://XXXX:8081 alone will NOT enable HTTPS and Maven will not work.
+
+You must configure HTTPS using a reverse proxy or configure TLS inside Artifactory.
+
+Once HTTPS is real and working → then update Custom Base URL.
+
+If you want, I can provide:
+
+✅ Nginx config
+✅ Apache config
+✅ Artifactory router TLS config
+✅ Kubernetes ingress config
+Just tell me your environment.
+
+Is this conversation helpful so far?
+
+
+
+Follow up
+
+Provide the Nginx SSL configuration steps for Artifactory setup.
+
+I need the Kubernetes ingress configuration for HTTPS Artifactory deployment.
+
+Give me a quick guide on setting up a reverse proxy with Apache for JFrog.
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. Check important info. See Cookie Preferences.
+
